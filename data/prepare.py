@@ -1,10 +1,13 @@
+import sys
+import os
 import json
 import numpy as np
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from train import CharTokenizer
 
 def prepare_data():
     # Load text
-    with open('data/input.txt', 'r', encoding='utf-8') as f:
+    with open('input.txt', 'r', encoding='utf-8') as f:
         text = f.read()
     
     # Initialize tokenizer
@@ -19,11 +22,11 @@ def prepare_data():
     val_data = data[n:]
     
     # Save binary files
-    train_data.tofile('data/train.bin')
-    val_data.tofile('data/val.bin')
+    train_data.tofile('train.bin')
+    val_data.tofile('val.bin')
     
     # Save vocabulary
-    with open('data/vocab.json', 'w', encoding='utf-8') as f:
+    with open('vocab.json', 'w', encoding='utf-8') as f:
         json.dump({'stoi': tokenizer.stoi, 'itos': tokenizer.itos}, f, ensure_ascii=False)
     
     print("Data preparation completed. Train and val data saved to data/train.bin and data/val.bin")
