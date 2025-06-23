@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import math
+import torch.nn.functional as F
 
 class SelfAttention(nn.Module):
     def __init__(self, config):
@@ -14,7 +14,7 @@ class SelfAttention(nn.Module):
         self.value = nn.Linear(config.n_embd, config.n_embd)
         self.proj = nn.Linear(config.n_embd, config.n_embd)
         self.dropout = nn.Dropout(config.dropout)
-        self.register_buffer("mask", torch.tril(torch.ones(config.block_size, config.block_size)).view(1, 1, config.block_size, config.block_size))
+        self.register_buffer("mask", None)  # Маска создаётся в forward
 
     def forward(self, x):
         B, T, C = x.size()
@@ -22,16 +22,17 @@ class SelfAttention(nn.Module):
         k = self.key(x).view(B, T, self.n_head, self.head_size).transpose(1, 2)    # (B, n_head, T, head_size)
         v = self.value(x).view(B, T, self.n_head, self.head_size).transpose(1, 2)  # (B, n_head, T, head_size)
         
-        # Scaled dot-product attention
-        scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_size)  # (B, n_head, T, T)
-        scores = scores.masked_fill(self.mask[:, :, :T, :T] == 0, float('-inf'))
-        scores = torch.softmax(scores, dim=-1)
-        scores = self.dropout(scores)
-        out = scores @ v  # (B, n_head, T, head_size)
+        if self.mask is None or self.mask.shape[-1] < T:
+            self.mask = torch.tril(torch.ones(T, T, device=x.device)).view(1, 1, T, T)
+        
+        out = F.scaled_dot_product_attention(
+            q, k, v,
+            attn_mask=self.mask[:, :, :T, :T],
+            dropout_p=self.dropout.p if self.training else 0
+        )  # (B, n_head, T, head_size)
         out = out.transpose(1, 2).contiguous().view(B, T, C)  # (B, T, C)
         out = self.proj(out)
         return self.dropout(out)
-
 class GPTBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
