@@ -1,0 +1,15 @@
+name: gpt-env
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pytorch>=2.0.0
+  - numpy>=1.21.0
+  - tqdm>=4.65.0
+  - pip
+  - pip:
+      - gradio>=4.0.0
+      - flake8
+      - pytest
